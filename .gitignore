@@ -1,0 +1,139 @@
+# ==========================
+# PYTHON
+# ==========================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.env
+
+# Distribution / packaging
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Mac / Windows junk
+.DS_Store
+Thumbs.db
+
+
+# ==========================
+# LATEX
+# ==========================
+
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+
+## Intermediate documents:
+*.dvi
+*.xdv
+*.bbl
+*.bcf
+*.blg
+*-blx.bib
+*.run.xml
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.pdfsync
+*.idx
+*.ilg
+*.ind
+*.ist
+
+## Editor-specific:
+*.texpadtmp
+*.lyx~
+*.bak
+*.backup
+
+## Output files:
+*.pdf
+*.ps
+*.eps
+
+# Optional: Keep PDFs if you *want* to version them
+# Uncomment next line if you want to keep compiled PDFs
+# !*.pdf
+
+# latexmk / arara / makeindex aux files
+latex.out/
+latexmkrc
+arara.log
+
+
+# ==========================
+# MISC
+# ==========================
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Data or cache files
+*.cache
+.cache/
+
+# Backup files
+*~
+
+# System files
+Icon?
