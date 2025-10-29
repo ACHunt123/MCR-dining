@@ -5,45 +5,95 @@ import sys
 from scipy.linalg import block_diag
 from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
+from scipy.sparse import csr_matrix
 
 ### Get the names from Upay and seating form responses to generate the Matrices required
 event_booking_html = "/mnt/c/Users/Cole/Downloads/Upay - Event Booking.html"
 seating_form_responses = "/mnt/c/Users/Cole/Downloads/Superhall Seating Request Form (Responses).xlsx"
-A,P,T,G,seat_positions = get_Matrices(event_booking_html,seating_form_responses)
-ntot=T.shape[0]
-
-### Setup the plot
-# happiness=np.zeros((ntot))
-happiness = np.random.rand(ntot) * 100  # new color values
-
-sc,ax,stop_button=plot_setup(plt,seat_positions,happiness)
-def stop(event):sys.exit()
-stop_button.on_clicked(stop)
+A,P,G,seat_positions = get_Matrices(event_booking_html,seating_form_responses) #matrices in csr format
+ntot=A.shape[0]
+print(f'total number of seate {ntot}')
 '''
 Calculate the seating plan using Monte Carlo.
-A: adjacency matrix [seats->seats]         Gives score of how good seating is. e.g. A12 = how good is it for 1 to sit with 2
-P: preference matrix [people->people]      Gives people's preference of sitting next to eachother. e.g. P23 = how person 2 rated 3
-T: transformation matrix [people->seats]   Stores the position of each person (binary choice)
-G: gallery matrix [people->seats]          Stores preferences of people to be in gallery. Also if needed can add biasing for seats to be at end of table
+A: adjacency matrix     A[seat#,:]= list of weights on seat#s      Gives score of how good seating is. e.g. A12 = how good is it for 1 to sit with 2
+P: preference matrix    P[person#,:]= list of that person's preference on person#s
+G: gallery matrix       G[person#,:]= list of person's prefrence on seat#s
+s: Seat location        s[person#]= seat#   
+p: Person location      p[seat#]= person#   
 '''
 
-# Loop that updates colors every 5 seconds
-for i in range(1000):  # update 10 times
+def happiness(person_indx,A,P,G,s):
+    """    
+    1. find the persons seat number
+    2. find the person index of the persons preferences
+    3. find the places next to the person
+    4. go through and compare the  
+    """
+    h = 0.0
+    seat_number = s[person_indx]
 
-    ns = np.random.rand(ntot) * 100  # new color values
-    sc.set_array(ns)  # update scatter color data
-    ax.set_title(f"Update {i+1}")
+    friends = P.getrow(person_indx)      # preferences for other people
+    adjacents = A.getrow(seat_number)    # adjacency for this person's seat
+
+    # Iterate through friends and adjacent seats
+    for friend_pref, friend_seat in zip(friends.data, s[friends.indices]):
+        for adj_weight, adj_seat in zip(adjacents.data, adjacents.indices):
+            if friend_seat == adj_seat:
+                h += friend_pref * adj_weight
+    # Add the Gallery contribution
+    h += G[person_indx,seat_number]
+
+    return h
+
+def all_happiness(A,P,G,p,s):
+    return np.array([happiness(p_indx,A,P,G,s) for p_indx in p])
+
+def total_happiness(A,P,G,p,s):
+    return np.sum(all_happiness(A,P,G,p,s))
+
+def swap_seats(person_i,person_j,s,p):
+    ''' Swap person index i and person index j in both the maps'''
+    # Update the seat of person_i and person_j
+    s[person_i],s[person_j]=s[person_j],s[person_i]
+    # Update the invesr map accordingly
+    p[s[person_i]],p[s[person_j]]=person_i,person_j
+    return s,p
+
+
+### Initial conditions
+s0=np.arange(ntot)
+p0=np.arange(ntot)
+h0=total_happiness(A,P,G,p0,s0)
+### Setup the plot
+sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0)
+def stop(event):sys.exit()
+stop_button.on_clicked(stop)
+T=1
+for it in range(1000):  
+
+    i, j = np.random.choice(ntot, size=2, replace=False)
+    s,p=swap_seats(i,j,s0.copy(),p0.copy())
+    h=total_happiness(A,P,G,p,s)
+
+    delta_h = h - h0
+    print(h)
+
+    # Always accept if better, otherwise accept with probability exp(delta_h / T)
+    if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
+        h0=h
+        s0=s.copy()
+        p0=p.copy()
+        sc.set_array(all_happiness(A,P,G,p,s))                   # update scatter color data
+        for person_idx, t in enumerate(text_labels): #update 
+            t.set_text(p[person_idx])  # 
+
+
+    ax.set_title(f"Update {it+1}")
+
     plt.draw()
-    plt.pause(0.001)  # wait 5 seconds
+    plt.pause(0.00001)  # wait 5 seconds
 
 plt.ioff()  # turn off interactive mode when done
 plt.show()
 
 
-# Setup the tables
-# names 
-# priority [p1,p2,p3]
-
-
-# Display the first few rows
-# print(df.head())

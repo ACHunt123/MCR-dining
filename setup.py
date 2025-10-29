@@ -5,19 +5,16 @@ import sys
 from scipy.linalg import block_diag
 from matplotlib.widgets import Button
 from getnames import AttendeeScraper
+from scipy.sparse import csr_matrix
 
 
 def get_Matrices(event_booking_html,seating_form_responses):
     ### Get the names from Upay
-    filename = "/mnt/c/Users/Cole/Downloads/Upay - Event Booking.html"
     guestlist=AttendeeScraper(event_booking_html)
     guestlist.load_html()
     guestlist.get_attendees()
-    # print(guestlist.everyone)
-
 
     # Read the Excel file into a DataFrame
-    file_path = "/mnt/c/Users/Cole/Downloads/Superhall Seating Request Form (Responses).xlsx"
     df = pd.read_excel(seating_form_responses, engine='openpyxl')
 
     '''
@@ -35,15 +32,11 @@ def get_Matrices(event_booking_html,seating_form_responses):
 
     We number the tables from top left (north is high-table) anticlockwise, starting from left most table. First hall, then gallery
     '''
-    # npl=len(guestlist.everyone)
-    # nsts=120
-    # # Get the A matrix
-
     ### Setup the Hall (three long tables and 2 square in the gallery)
     table_types=['long','long','long','square','square']
     center_posns=np.array([[0,0],[3,0],[6,0],[1,-12],[4,-12]])
     widths=[1,1,1,2,2]
-    table_seats=[30,30,30,12,12]
+    table_seats=[40,40,40,12,12]#144-120 =24
     def A_blk(table_type,nsts,center_posn=np.array([0,0]),length=10,width=1):
         seat_positions=np.zeros((nsts,2))
         A_block=np.zeros((nsts,nsts))
@@ -113,7 +106,6 @@ def get_Matrices(event_booking_html,seating_form_responses):
         i0+=seats
         A=block_diag(A,A_i) if A is not None else A_i
     gallery_seat_indices = gallery_seat_indices.astype(int)
-    npl=np.shape(A)[0] 
 
     # Get the P and G matrices from the seating form
     P=np.zeros_like(A); G=np.zeros_like(A)
@@ -127,17 +119,35 @@ def get_Matrices(event_booking_html,seating_form_responses):
             if pd.isna(pref): continue # if the preference is not specified in the form continue
             # print(f'{priority_level} priority is {pref}')
             pref_indx=guestlist.find(pref) # find the index in the name list
-            P[name_indx,pref_indx]=prefs_weights[pl] # assign the preferential weight
+            P[name_indx,pref_indx]+=prefs_weights[pl] # assign the preferential weight
         ## do the preferences for sitting in the gallery
         gallery_pref = row['I would prefer to be seated in the Gallery ']
         gallery_weight=5 # weighting for sitting in gallery
         if gallery_pref=='Yes':
             G[name_indx,gallery_seat_indices]=gallery_weight
-        
-        T=np.eye(npl)
-    return A,P,T,G,seat_positions
+    
+    # Add preferences for sitting next to your guests
+    guest_pref=5
+    print(f'total number of people: {len(guestlist.everyone)}')
+    # sys.exit()
+    for attendee in guestlist.attendees:
+        # print(attendee)
+        attendee_indx=guestlist.find(attendee)
 
-def plot_setup(plt,seat_positions,happiness):
+        for guest in guestlist.attendees_guest_map[attendee]:
+            guest_indx=guestlist.find(guest)
+            P[guest_indx,attendee_indx]+=guest_pref
+            P[attendee_indx,guest_indx]+=guest_pref
+            # print(f'attendee{attendee_indx}')
+            # print(f'guest_indx{guest_indx}')
+            # print(f'__{guest}')
+            # sys.exit()
+    
+        
+    return csr_matrix(A),csr_matrix(P),csr_matrix(G),seat_positions
+    # return A,P,G,seat_positions
+
+def plot_setup(plt,seat_positions,happiness,p):
     ### Setup the plot
     plt.ion()
     fig, ax = plt.subplots()
@@ -146,7 +156,11 @@ def plot_setup(plt,seat_positions,happiness):
     # Button setup
     button_ax = plt.axes([0.4, 0.05, 0.2, 0.075])  # x, y, width, height
     stop_button = Button(button_ax, 'STOP', color='lightcoral', hovercolor='red')
-    return sc,ax,stop_button
+    text_labels = []
+    for seat_number, (x, y) in enumerate(seat_positions):
+        t = ax.text(x, y, p[seat_number], fontsize=9, ha='center', va='center', color='black')
+        text_labels.append(t)
+    return sc,ax,stop_button,text_labels
 
     
 
@@ -159,7 +173,6 @@ if __name__=='__main__':
     print(seat_positions.shape)
     # print
     sc,ax,stop_button=plot_setup(plt,seat_positions,happiness)
-
     def stop(event):sys.exit()
     stop_button.on_clicked(stop)
     # Loop that updates colors every 5 seconds

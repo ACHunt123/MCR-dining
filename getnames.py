@@ -32,13 +32,16 @@ class AttendeeScraper:
                 attendee_name = attendee.get_text(strip=True)
                 ## add the attendee to the dict
                 self.attendees_guest_map[attendee_name]=[]
+            n=1
             for guest in guests_of_atendee:
                 ## add the guests to the dictionary
                 guest_name = guest.get_text(strip=True)
                 if guest_name != 'Guest':
                     self.attendees_guest_map[attendee_name].append(guest_name)
                 else: # If name not given default "to Guest of ..."
-                    self.attendees_guest_map[attendee_name].append(f'Guest of {attendee_name}')
+                    self.attendees_guest_map[attendee_name].append(f'Guest of {attendee_name} ({n})')
+                    # self.attendees_guest_map[attendee_name].append(f'Guest of {attendee_name}')
+                    n+=1
         self.attendees=sorted(list(self.attendees_guest_map.keys()))
         self.everyone=[]
         for attendee, guests in self.attendees_guest_map.items():
