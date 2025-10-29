@@ -33,11 +33,11 @@ def get_Matrices(event_booking_html,seating_form_responses):
     We number the tables from top left (north is high-table) anticlockwise, starting from left most table. First hall, then gallery
     '''
     ### Setup the Hall (three long tables and 2 square in the gallery)
-    table_types=['long','long','long','square','square']
-    center_posns=np.array([[0,0],[3,0],[6,0],[1,-12],[4,-12]])
-    widths=[1,1,1,2,2]
-    table_seats=[40,40,40,12,12]#144-120 =24
-    def A_blk(table_type,nsts,center_posn=np.array([0,0]),length=10,width=1):
+    table_types=['long','long','long','long','square','square']
+    table_seats=[30,30,30,30,12,12]#144-120 =24
+    max_long_length=np.max(table_seats[0:4])//2
+    posns=np.array([[3,6],[8,6],[13,6],[18,6],[6,31],[13,31]]) #cell position of the top left person
+    def A_blk(table_type,nsts,posn=np.array([0,0]),length=10):
         seat_positions=np.zeros((nsts,2))
         A_block=np.zeros((nsts,nsts))
         if table_type=='long':
@@ -45,11 +45,10 @@ def get_Matrices(event_booking_html,seating_form_responses):
             l_indices=np.arange(0,nsts//2)
             r_indices=np.arange(nsts//2,nsts)
 
-            delta_height=length/(nsts//2)
             for i, (l_indx,r_indx) in enumerate(zip(l_indices,r_indices)):
                 ### assign the seat positions
-                seat_positions[l_indx,:] = center_posn - (width/2)*np.array([1,0]) - i*delta_height*np.array([0,1])
-                seat_positions[r_indx,:] = center_posn + (width/2)*np.array([1,0]) - i*delta_height*np.array([0,1])
+                seat_positions[l_indx,:] = posn + i*np.array([0,1])
+                seat_positions[r_indx,:] = posn + np.array([2,0])+ i*np.array([0,1])
                 ### weights
                 w_opposite=3
                 w_adjacent=2
@@ -73,15 +72,16 @@ def get_Matrices(event_booking_html,seating_form_responses):
         elif table_type=='square':
             assert (nsts)%4==0,'number of seats on table must be 4n'
             n1side=(nsts)/4
-            delta_sidelength=width/n1side
-            seat_position=center_posn-(width/2)*np.array([1,1])
-            directions=np.array([[0,-1],[1,0],[0,1],[-1,0]])
+            directions=np.array([[0,1],[1,0],[0,-1],[-1,0]])
 
             indices=np.arange(0,nsts)
+            seat_position=posn.copy()
             for indx in indices:
+                if indx%n1side==0:                seat_position+=directions[int(indx//n1side),:]
+
                 ### seat position
                 seat_positions[indx,:] = seat_position
-                seat_position+=directions[int(indx//n1side),:]*delta_sidelength
+                seat_position+=directions[int(indx//n1side),:]
                 ### weights
                 w_adjacent1=3
                 w_adjacent2=1
@@ -96,8 +96,8 @@ def get_Matrices(event_booking_html,seating_form_responses):
     seat_positions=None
     gallery_seat_indices=None
     i0=0
-    for table_type,center_posn,seats,width in zip(table_types,center_posns,table_seats,widths):
-        A_i,seat_positions_i=A_blk(table_type,seats,center_posn=center_posn,width=width)
+    for table_type,posn,seats in zip(table_types,posns,table_seats):
+        A_i,seat_positions_i=A_blk(table_type,seats,posn=posn)
         seat_positions=np.concatenate([seat_positions,seat_positions_i]) if seat_positions is not None else seat_positions_i
         if table_type=='square': # get the indices of the gallery seats
             gallery_seat_indices=np.concatenate([gallery_seat_indices,np.arange(i0,i0+seats)]) if gallery_seat_indices is not None else np.arange(i0,i0+seats)
@@ -127,7 +127,7 @@ def get_Matrices(event_booking_html,seating_form_responses):
             G[name_indx,gallery_seat_indices]=gallery_weight
     
     # Add preferences for sitting next to your guests
-    guest_pref=5
+    guest_pref=10
     print(f'total number of people: {len(guestlist.everyone)}')
     # sys.exit()
     for attendee in guestlist.attendees:
@@ -144,13 +144,14 @@ def get_Matrices(event_booking_html,seating_form_responses):
             # sys.exit()
     
         
-    return csr_matrix(A),csr_matrix(P),csr_matrix(G),seat_positions
+    return csr_matrix(A),csr_matrix(P),csr_matrix(G),seat_positions,guestlist.everyone
     # return A,P,G,seat_positions
 
-def plot_setup(plt,seat_positions,happiness,p):
+def plot_setup(plt,seat_positions,happiness,p,mode='interactive'):
     ### Setup the plot
-    plt.ion()
+    if mode=='interactive':plt.ion()
     fig, ax = plt.subplots()
+    ax.invert_yaxis() #for excel-like indexing
     sc = ax.scatter([x for x,y in seat_positions],[y for x,y in seat_positions],  c=happiness, cmap='RdYlGn')
     plt.colorbar(sc,label='n value')
     # Button setup

@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 ### Get the names from Upay and seating form responses to generate the Matrices required
 event_booking_html = "/mnt/c/Users/Cole/Downloads/Upay - Event Booking.html"
 seating_form_responses = "/mnt/c/Users/Cole/Downloads/Superhall Seating Request Form (Responses).xlsx"
-A,P,G,seat_positions = get_Matrices(event_booking_html,seating_form_responses) #matrices in csr format
+A,P,G,seat_positions,namelist = get_Matrices(event_booking_html,seating_form_responses) #matrices in csr format
 ntot=A.shape[0]
 print(f'total number of seate {ntot}')
 '''
@@ -65,35 +65,68 @@ s0=np.arange(ntot)
 p0=np.arange(ntot)
 h0=total_happiness(A,P,G,p0,s0)
 ### Setup the plot
-sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0)
-def stop(event):sys.exit()
-stop_button.on_clicked(stop)
+show=False
+save_to_spreadsheet=True
+if show:
+    sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0)
+    def stop(event):sys.exit()
+    stop_button.on_clicked(stop)
 T=1
-for it in range(1000):  
+nt=200000
+for it in range(nt):  
 
     i, j = np.random.choice(ntot, size=2, replace=False)
     s,p=swap_seats(i,j,s0.copy(),p0.copy())
     h=total_happiness(A,P,G,p,s)
 
     delta_h = h - h0
-    print(h)
+    if it%100==0:print(f'{it}/{nt}   h={h}')
 
     # Always accept if better, otherwise accept with probability exp(delta_h / T)
     if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
         h0=h
         s0=s.copy()
         p0=p.copy()
-        sc.set_array(all_happiness(A,P,G,p,s))                   # update scatter color data
-        for person_idx, t in enumerate(text_labels): #update 
-            t.set_text(p[person_idx])  # 
+        if show:
+            sc.set_array(all_happiness(A,P,G,p,s))                   # update scatter color data
+            for seat_idx, t in enumerate(text_labels): #update 
+                t.set_text(p[seat_idx])  # 
+
+    if show:
+        ax.set_title(f"Update {it+1}")
+        plt.draw()
+        plt.pause(0.00001)  # wait 5 seconds
+## Save the results to the seating plan
+import openpyxl
+filename= '/mnt/c/Users/Cole/Downloads/Seating-plan-template.xlsx'
+wb = openpyxl.load_workbook(filename)
+ws = wb.active 
+# Write each name into its corresponding cell
+for (col, row), person_indx in zip(seat_positions, p):
+    name=namelist[person_indx]
+    # print(row,col)
+    ws.cell(row=int(row), column=int(col), value=name)
+
+# Save under a new name to keep the original template safe
+wb.save("/mnt/c/Users/Cole/Downloads/seating_filled.xlsx")
+# save as a pdf
+df = pd.read_excel("/mnt/c/Users/Cole/Downloads/seating_filled.xlsx", sheet_name="Sheet1")
+df = df.fillna('')
+html = df.to_html(index=False, border=1, justify='center')
+with open("table.html", "w") as f:
+    f.write(html)
+from weasyprint import HTML
+HTML("table.html").write_pdf("seating_chart.pdf")
 
 
-    ax.set_title(f"Update {it+1}")
 
-    plt.draw()
-    plt.pause(0.00001)  # wait 5 seconds
 
-plt.ioff()  # turn off interactive mode when done
-plt.show()
+if show:
+    plt.ioff()  # turn off interactive mode when done
+    plt.show()
+else:
+    sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0,mode='not interactive')
+    plt.show()
+    #plotfinal
 
 
