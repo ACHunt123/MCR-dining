@@ -107,6 +107,7 @@ Thumbs.db
 
 ## Output files:
 *.pdf
+*.html
 *.ps
 *.eps
 
