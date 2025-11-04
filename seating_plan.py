@@ -98,6 +98,8 @@ def all_sat_with_guests(ntot,guestlist):
 
 
 ### Randomize initial confign
+# Set a different seed, e.g., 42
+np.random.seed(42)
 s0 = np.random.permutation(ntot)
 p0 = np.empty_like(s0)
 p0[s0] = np.arange(ntot)
@@ -112,7 +114,7 @@ if show:
     def stop(event):sys.exit()
     stop_button.on_clicked(stop)
 T=1
-nt=2000
+nt=10000
 for it in range(nt):  
 
     i, j = np.random.choice(ntot, size=2, replace=False)
@@ -167,9 +169,6 @@ HTML("table.html").write_pdf("seating_chart.pdf")
 if show:
     plt.ioff()  # turn off interactive mode when done
     plt.show()
-else:
-    sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0,mode='not interactive')
-    plt.show()
-    #plotfinal
+
 
 

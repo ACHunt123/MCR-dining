@@ -137,3 +137,6 @@ temp/
 
 # System files
 Icon?
+
+# THe actual seating plan (privacy reasons)
+data/seating_filled.xlsx
