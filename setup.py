@@ -8,15 +8,15 @@ from getnames import AttendeeScraper
 from scipy.sparse import csr_matrix
 
 
-def get_Matrices(event_booking_html,seating_form_responses):
+def get_Matrices(event_booking_html,swaps_xlsprd,seating_form_responses):
     ### Get the names from Upay
-    guestlist=AttendeeScraper(event_booking_html)
-    guestlist.load_html()
-    guestlist.get_attendees()
+    guestlist=AttendeeScraper(event_booking_html,swaps_xlsprd)
+    guestlist.load_Upay()
+    guestlist.load_Swaps()
     # guestlist.pretty_print()
     
 
-    # Read the Excel file into a DataFrame
+    # Read the Excel file of preferences in seating into a DataFrame
     df = pd.read_excel(seating_form_responses, engine='openpyxl')
 
     '''
@@ -37,6 +37,8 @@ def get_Matrices(event_booking_html,seating_form_responses):
     ### Setup the Hall (three long tables and 2 square in the gallery)
     table_types=['long','long','long','long','square','square']
     table_seats=[30,30,30,30,12,12]#144-120 =24
+    table_types=['long','long','long','long']
+    table_seats=[40,40,40,38]
     max_long_length=np.max(table_seats[0:4])//2
     posns=np.array([[3,6],[8,6],[13,6],[18,6],[6,31],[13,31]]) #cell position of the top left person
     def A_blk(table_type,nsts,posn=np.array([0,0]),length=10):
@@ -114,16 +116,24 @@ def get_Matrices(event_booking_html,seating_form_responses):
     for index, row in df.iterrows():# go through each row in the spreadsheet
         ## do the preferences for seating next to eachother
         name = row['What is your name ?']
+        Qs=['Who would you like to sit next to?  First priority. You will automatically be put with your guests.',
+            'Who would you like to sit next to?  Second priority.  You will automatically be put with your guests.',
+            'Who would you like to sit next to?  Third priority. You will automatically be put with your guests!!',]
         name_indx=guestlist.find(name)
+        if name_indx==-1:
+            print(f'name {name} in superhall preference form not found')
         prefs_weights=[3,2,1] # weighting for the prefs
-        for pl, priority_level in enumerate(['First','Second','Third']):
-            pref = row[f'Who would you like to sit next to?  {priority_level} priority']
+        for pl, Question in enumerate(Qs):
+            pref = row[Question]
             if pd.isna(pref): continue # if the preference is not specified in the form continue
             # print(f'{priority_level} priority is {pref}')
             pref_indx=guestlist.find(pref) # find the index in the name list
+            if pref_indx==-1:
+                print(f'preference of {pref} not found in guestlist, skipping')
+                continue
             P[name_indx,pref_indx]+=prefs_weights[pl] # assign the preferential weight
         ## do the preferences for sitting in the gallery
-        gallery_pref = row['I would prefer to be seated in the Gallery ']
+        gallery_pref = row['I would prefer to be seated in the gallery if it is to be open']
         gallery_weight=5 # weighting for sitting in gallery
         if gallery_pref=='Yes':
             G[name_indx,gallery_seat_indices]=gallery_weight
@@ -131,13 +141,20 @@ def get_Matrices(event_booking_html,seating_form_responses):
     # Add preferences for sitting next to your guests
     guest_pref=10
     print(f'total number of people: {len(guestlist.everyone)}')
-    # sys.exit()
+
     for attendee in guestlist.attendees:
-        # print(attendee)
+
         attendee_indx=guestlist.find(attendee)
+        if attendee_indx==-1: 
+            print(f'attendee {attendee} not found')
+            continue
 
         for guest in guestlist.attendees_guest_map[attendee]:
             guest_indx=guestlist.find(guest)
+            if guest_indx==-1:
+                print(f'guest {guest} not found')
+                continue
+
             P[guest_indx,attendee_indx]+=guest_pref
             P[attendee_indx,guest_indx]+=guest_pref
             # print(f'attendee{attendee_indx}')

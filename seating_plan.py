@@ -9,10 +9,12 @@ from scipy.sparse import csr_matrix
 
 folder='/mnt/c/Users/Cole/Downloads'
 folder='/home/colehunt/software/MCR-dining/data'
+folder='/home/ach221/Downloads'
 ### Get the names from Upay and seating form responses to generate the Matrices required
 event_booking_html = f"{folder}/Upay - Event Booking.html"
 seating_form_responses = f"{folder}/Superhall Seating Request Form (Responses).xlsx"
-A,P,G,seat_positions,guestlist = get_Matrices(event_booking_html,seating_form_responses) #matrices in csr format
+swaps_xls = f"{folder}/MTSuperhallSwaps2025-26.xlsx"
+A,P,G,seat_positions,guestlist = get_Matrices(event_booking_html,swaps_xls,seating_form_responses) #matrices in csr format
 namelist=guestlist.everyone
 ntot=A.shape[0]
 print(f'total number of seate {ntot}')
@@ -71,35 +73,46 @@ def sat_with_guests(attendee,guestlist):
     adjacents = A.getrow(seat_number)    # adjacency for this person's seat
 
     #   attendee_indx=guestlist.find(attendee)
+    count=0
+    total=0
     for guest in guestlist.attendees_guest_map[name]:
+        total+=1
         guest_indx=guestlist.find(guest)
         guest_location=s[guest_indx]
         for adj_indx in adjacents.indices:
             if guest_location == adj_indx:
-                print(f'happy {name}, seat number {seat_number}')
-                return 0
-        return -1 # fail 
-    return 0 # if no guests
+                count+=1
+    return count, total
 
 def all_sat_with_guests(ntot,guestlist):
-    score=0
+    score=0;total=0
     for attendee in guestlist.attendees: 
-        score += sat_with_guests(attendee,guestlist)
-    print(f'SCORE: {score}')
+        si, ti = sat_with_guests(attendee,guestlist)
+        score+=si ; total+= ti
+    print(f'SCORE: {score} of {total}')
 
 ### Initial conditions
-s0=np.arange(ntot)
-p0=np.arange(ntot)
+# s0=np.arange(ntot)
+# p0=np.arange(ntot)
+# Random permutation for seating
+
+
+### Randomize initial confign
+s0 = np.random.permutation(ntot)
+p0 = np.empty_like(s0)
+p0[s0] = np.arange(ntot)
+
+
 h0=total_happiness(A,P,G,p0,s0)
 ### Setup the plot
-show=1
-save_to_spreadsheet=False
+show=0
+save_to_spreadsheet=1
 if show:
     sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0)
     def stop(event):sys.exit()
     stop_button.on_clicked(stop)
 T=1
-nt=20000
+nt=2000
 for it in range(nt):  
 
     i, j = np.random.choice(ntot, size=2, replace=False)
@@ -107,7 +120,13 @@ for it in range(nt):
     h=total_happiness(A,P,G,p,s)
 
     delta_h = h - h0
-    if it%100==0:print(f'{it}/{nt}   h={h}')
+    if it%100==0:
+        all_sat_with_guests(ntot,guestlist)
+        print(f'{it}/{nt}   h={h}')
+        if show:
+            ax.set_title(f"Update {it+1}")
+            plt.draw()
+            plt.pause(0.00001)  # wait 5 seconds
 
     # Always accept if better, otherwise accept with probability exp(delta_h / T)
     if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
@@ -119,15 +138,10 @@ for it in range(nt):
             for seat_idx, t in enumerate(text_labels): #update 
                 t.set_text(p[seat_idx])  # 
 
-    if show and it%100==0:
-        all_sat_with_guests(ntot,guestlist)
-        ax.set_title(f"Update {it+1}")
-        plt.draw()
-        plt.pause(0.00001)  # wait 5 seconds
-        plt.pause(100)  # wait 5 seconds
+    
 ## Save the results to the seating plan
 import openpyxl
-filename= f'{folder}/Seating-plan-template.xlsx'
+filename= f'data/Seating-plan-template.xlsx'
 wb = openpyxl.load_workbook(filename)
 ws = wb.active 
 # Write each name into its corresponding cell
@@ -137,9 +151,9 @@ for (col, row), person_indx in zip(seat_positions, p):
     ws.cell(row=int(row), column=int(col), value=name)
 
 # Save under a new name to keep the original template safe
-wb.save(f"{folder}/seating_filled.xlsx")
+wb.save(f"data/seating_filled.xlsx")
 # save as a pdf
-df = pd.read_excel(f"{folder}/seating_filled.xlsx", sheet_name="Sheet1")
+df = pd.read_excel(f"data/seating_filled.xlsx", sheet_name="Sheet1")
 df = df.fillna('')
 html = df.to_html(index=False, border=1, justify='center')
 with open("table.html", "w") as f:

@@ -4,25 +4,26 @@ import pandas as pd
 import numpy as np
 
 class AttendeeScraper:
-    def __init__(self, filepath):
-        self.filepath = filepath
-        self.soup = None
-        self.attendees_guest_map={}
-        self.attendees=None
+    def __init__(self, Upay_filepath=None,swap_filepath=None):
+        self.Upay_filepath = Upay_filepath
+        self.swap_filepath = swap_filepath
+        # initialize the arrays
+        self.attendees_guest_map={} #dict of attendes (people who can bring guests) with their guests listed
+        self.attendees=[]         # list of attendees (people who can bring guests)
+        self.everyone=[]          # everyone (that will be swaped around in the seating plan)
+        self.others=[]            # other people (swap guests that are not willing to be mixed)
 
-
-    def load_html(self):
-        with open(self.filepath, 'r', encoding='utf-8') as f:
+    def load_Upay(self):
+        if self.Upay_filepath == None: sys.exit('need to specify the file first silly')
+        ''' Scrape the attendees and guests from Upay html
+            Each booking_group is in "class_='booking-group'"
+            In each one, the attendee has format "font-weight:500" and the guests of each one has "text-indent: 10px".
+        '''
+        #Open the html with soup
+        with open(self.Upay_filepath, 'r', encoding='utf-8') as f:
             html = f.read()
         self.soup = BeautifulSoup(html, 'html.parser')
-
-    def get_attendees(self):
-        ''' Scrapes the attendees and their guests from the html
-        Each booking_group is in "class_='booking-group'"
-        In each one, the attendee has format "font-weight:500"
-        and the guests of each one has "text-indent: 10px".
-        This has been found from "inspect element" on the html
-        '''
+        #find each group of attenge and their guests
         booking_groups = self.soup.find_all('div', class_='booking-group')
         for group in booking_groups:
             attendees = group.find_all("p", style=lambda value: value and "font-weight:500" in value)
@@ -43,27 +44,45 @@ class AttendeeScraper:
                     self.attendees_guest_map[attendee_name].append(f'Guest of {attendee_name} ({n})')
                     # self.attendees_guest_map[attendee_name].append(f'Guest of {attendee_name}')
                     n+=1
-        self.attendees=list(self.attendees_guest_map.keys())
-        self.everyone=[]
+
+        #NOTE list(set( )) removes duplicates
+        # self.attendees.extend(list(set(self.attendees_guest_map.keys()))) #list of the people that have booked (not including peoples guests)
+        self.attendees.extend( self.attendees_guest_map.keys()) #list of the people that have booked (not including peoples guests)
+        ### add to everyone 
         for attendee, guests in self.attendees_guest_map.items():
             self.everyone.append(attendee)
             self.everyone.extend(guests)
-        self.everyone=np.array(self.everyone)
-        self.all_named= [name for name in self.everyone if not name.startswith("Guest of")]
-
+        self.everyone=list(set(self.everyone)) #list(set( )) removes duplicates
         return
+    
+    def load_Swaps(self):
+        if self.swap_filepath == None: sys.exit('need to specify the file first silly')
+        ''' Load the swap people THAT WANT TO BE PUT IN SEATING PLAN'''
+        included_colleges=['St Catz']
+        df = pd.read_excel(self.swap_filepath, engine='openpyxl')
+        for index, row in df.iterrows():# go through each row in the spreadsheet
+        ## do the preferences for seating next to eachother
+            name = row['Name']
+            college = row['College']
+            if college in included_colleges:
+                self.everyone.append(name)
+                self.attendees.append(name)
+                self.attendees_guest_map[name]=[]
+            else:
+                self.others.append(name)
+        return
+
+    
+
 
     def pretty_print(self):
         ''' print out the attendees and guests'''
         if self.attendees is None: 
             sys.exit('need to get the data first silly')
-        # for attendee in self.attendees:
-            # print(attendee)
-        for name in self.all_named:
-            print(name)
-        # sys.exit()
-            # for guest in self.attendees_guest_map[attendee]:
-                # print(f'__{guest}')
+        for attendee in self.attendees:
+            print(attendee)
+            for guest in self.attendees_guest_map[attendee]:
+                print(f'__{guest} (guest of {attendee})')
 
     def find(self,name):
         ''' find the index of the name in the everyone list'''
@@ -71,11 +90,11 @@ class AttendeeScraper:
         for indx,person in enumerate(self.everyone):
             if name==person: index_list.append(indx)
         if len(index_list)==0: # noone found
-            if not pd.isna(name): # if nan, noone was selected --> if not nan, error in name list
-                sys.exit(f'guest not found in everyone list.\n their name is {name}')
-            return name
+            # if not pd.isna(name): # if nan, noone was selected --> if not nan, error in name list
+            #     sys.exit(f'guest not found in everyone list.\n their name is {name}')
+            return -1 #guest not found
         elif len(index_list)>1:
-            sys.exit('duplicates found')
+            sys.exit(f'duplicates found of {name}')
         return index_list[0]
 
 
