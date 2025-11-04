@@ -5,8 +5,7 @@ import sys
 from scipy.linalg import block_diag
 from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
-from scipy.sparse import csr_matrix
-
+from metrics_moves import total_happiness,all_happiness,swap_seats,all_sat_with_guests
 folder='/mnt/c/Users/Cole/Downloads'
 folder='/home/colehunt/software/MCR-dining/data'
 folder='/home/ach221/Downloads'
@@ -27,69 +26,7 @@ s: Seat location        s[person#]= seat#
 p: Person location      p[seat#]= person#   
 '''
 
-def happiness(person_indx,A,P,G,s):
-    """    
-    1. find the persons seat number
-    2. find the person index of the persons preferences
-    3. find the places next to the person
-    4. go through and compare the  
-    """
-    h = 0.0
-    seat_number = s[person_indx]
 
-    friends = P.getrow(person_indx)      # preferences for other people
-    adjacents = A.getrow(seat_number)    # adjacency for this person's seat
-
-    # Iterate through friends and adjacent seats
-    for friend_pref, friend_seat in zip(friends.data, s[friends.indices]):
-        for adj_weight, adj_seat in zip(adjacents.data, adjacents.indices):
-            if friend_seat == adj_seat:
-                h += friend_pref * adj_weight
-    # Add the Gallery contribution
-    h += G[person_indx,seat_number]
-
-    return h
-
-def all_happiness(A,P,G,p,s):
-    return np.array([happiness(p_indx,A,P,G,s) for p_indx in p])
-
-def total_happiness(A,P,G,p,s):
-    return np.sum(all_happiness(A,P,G,p,s))
-
-def swap_seats(person_i,person_j,s,p):
-    ''' Swap person index i and person index j in both the maps'''
-    # Update the seat of person_i and person_j
-    s[person_i],s[person_j]=s[person_j],s[person_i]
-    # Update the invesr map accordingly
-    p[s[person_i]],p[s[person_j]]=person_i,person_j
-    return s,p
-
-def sat_with_guests(attendee,guestlist):
-    ''' Check that the selected person is sat with all of their guests'''
-    person_i=guestlist.find(attendee)
-    seat_number = s[person_i]
-    name=guestlist.everyone[person_i]
-
-    adjacents = A.getrow(seat_number)    # adjacency for this person's seat
-
-    #   attendee_indx=guestlist.find(attendee)
-    count=0
-    total=0
-    for guest in guestlist.attendees_guest_map[name]:
-        total+=1
-        guest_indx=guestlist.find(guest)
-        guest_location=s[guest_indx]
-        for adj_indx in adjacents.indices:
-            if guest_location == adj_indx:
-                count+=1
-    return count, total
-
-def all_sat_with_guests(ntot,guestlist):
-    score=0;total=0
-    for attendee in guestlist.attendees: 
-        si, ti = sat_with_guests(attendee,guestlist)
-        score+=si ; total+= ti
-    print(f'SCORE: {score} of {total}')
 
 ### Initial conditions
 # s0=np.arange(ntot)
@@ -103,9 +40,8 @@ np.random.seed(42)
 s0 = np.random.permutation(ntot)
 p0 = np.empty_like(s0)
 p0[s0] = np.arange(ntot)
-
-
 h0=total_happiness(A,P,G,p0,s0)
+
 ### Setup the plot
 show=0
 save_to_spreadsheet=1
@@ -113,9 +49,10 @@ if show:
     sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0)
     def stop(event):sys.exit()
     stop_button.on_clicked(stop)
-T=1
+T=10
 nt=10000
 for it in range(nt):  
+    T*=0.9995
 
     i, j = np.random.choice(ntot, size=2, replace=False)
     s,p=swap_seats(i,j,s0.copy(),p0.copy())
@@ -123,8 +60,8 @@ for it in range(nt):
 
     delta_h = h - h0
     if it%100==0:
-        all_sat_with_guests(ntot,guestlist)
-        print(f'{it}/{nt}   h={h}')
+        all_sat_with_guests(s,A,guestlist)
+        print(f'{it}/{nt}   h={h}   T={T}')
         if show:
             ax.set_title(f"Update {it+1}")
             plt.draw()
