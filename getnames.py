@@ -65,7 +65,7 @@ class AttendeeScraper:
             college = row['College']
             if college in included_colleges:
                 if name in self.everyone: #NOTE this is to set duplicates to be guests of eachother (Antonia N on swaps sheet...)
-                    self.everyone.append(f'guest of {name}')
+                    self.everyone.append(f'Guest of {name}')
                     self.attendees.append(name)
                     self.attendees_guest_map[name]=[f'Guest of {name}']
                 else:

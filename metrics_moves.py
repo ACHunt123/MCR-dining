@@ -30,11 +30,8 @@ def ij_andnearby(person_i,person_j,A,P,G,s,p):
     """Happiness of person_i, person_j, and all their adjacent neighbors (no double counting)."""
     seat_i, seat_j = s[person_i], s[person_j]
     adj_i, adj_j = A.getrow(seat_i), A.getrow(seat_j)
-    # All affected seats (combine neighbors)
-    combined_indices = np.unique(np.concatenate([adj_i.indices, adj_j.indices]))
-    # Map seats to people sitting there
-    affected_people = np.unique(np.concatenate([[person_i, person_j], p[combined_indices]]))
-    
+    # Map seats to people sitting there, np.unique removes double counting
+    affected_people = np.unique(np.concatenate([[person_i, person_j], p[adj_i.indices],p[adj_j.indices]]))
     # Sum happiness for all affected people
     total = sum(happiness(person, A, P, G, s) for person in affected_people)
     return total

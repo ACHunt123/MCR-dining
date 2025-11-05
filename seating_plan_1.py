@@ -78,12 +78,12 @@ for it in range(nt):
         p[:] = p_trial
 
     # Every 100 steps, monitor progress
-    if it % 100 == 0:
+    if it % 500 == 0:
         score1,total1=all_sat_with_guests(s,A,guestlist)
-        # print('SCORE1: {} of {}'.format(score1,total1))
-        # print(all_sat_with_friends(s,A,P,guestlist))
-        print(h,total_happiness(A, P, G, p, s))
-        # print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
+        print('SCORE1: {} of {}'.format(score1,total1))
+        print(all_sat_with_friends(s,A,P,guestlist))
+
+        print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
         hlist.append(h)
 
             # Store best configuration if new better one here
