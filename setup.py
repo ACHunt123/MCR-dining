@@ -27,10 +27,14 @@ def get_Matrices(event_booking_html,swaps_xlsprd,seating_form_responses):
     ### Setup the Hall (three long tables and 2 square in the gallery)
     # table_types=['long','long','long','long','square','square']
     # table_seats=[30,30,30,30,12,12]#144-120 =24
-    table_types=['long','long','long']
-    table_seats=[40,40,23]
-    assert np.sum(table_seats)==len(guestlist.everyone)
-    posns=np.array([[3,6],[8,6],[13,6],[18,6],[6,31],[13,31]]) #cell position of the top left person
+    table_types=['long','long','long','long','long']
+
+    table_seats=[24,36,36,36,23] #HT, T1, T2, T3, T4 
+    if np.sum(table_seats)!=len(guestlist.everyone):
+        print(f'there are {np.sum(table_seats)} seats, but {len(guestlist.everyone)} people')
+        sys.exit()
+    # posns=np.array([[3,6],[8,6],[13,6],[18,6],[6,31],[13,31]]) #cell position of the top left person
+    posns=np.array([[3,6],[8,6],[13,6],[18,6],[23,6]]) #cell position of the top left person
     A, seat_positions, gallery_seat_indices = setup_hall(table_types,posns,table_seats)
 
     ### Using the seating_form_responses, read off the P and G
@@ -45,7 +49,7 @@ def get_Matrices(event_booking_html,swaps_xlsprd,seating_form_responses):
         name_indx=guestlist.find(name)
         if name_indx==-1:
             print(f'name {name} in superhall preference form not found')
-        prefs_weights=[3,2,1] # weighting for the prefs
+        prefs_weights=[4,4,3] # weighting for the prefs
         for pl, Question in enumerate(Qs):
             pref = row[Question]
             if pd.isna(pref): continue # if the preference is not specified in the form continue

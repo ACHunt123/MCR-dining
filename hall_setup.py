@@ -20,9 +20,9 @@ def setup_hall(table_types,posns,table_seats):
                 seat_positions[l_indx,:] = posn + i*np.array([0,1])
                 seat_positions[r_indx,:] = posn + np.array([2,0])+ i*np.array([0,1])
                 ### weights
-                w_opposite=3
-                w_adjacent=2
-                w_diagonal=1
+                w_opposite=5
+                w_adjacent=4
+                w_diagonal=3
                 # across from eachother
                 A_block[l_indx,r_indx]=A_block[r_indx,l_indx]=w_opposite 
                 # next to eachother and diagonals

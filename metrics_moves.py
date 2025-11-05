@@ -25,6 +25,16 @@ def happiness(person_indx,A,P,G,s):
 
     return h
 
+def h_meandnearby(person_indx,A,P,G,s,p):
+    ''' Calculates the happiness of me, and all of the people sitting next to me'''
+    seat_number = s[person_indx]
+    adjacents = A.getrow(seat_number)    # adjacency for this person's seat
+    summed_h = happiness(person_indx,A,P,G,s) #my happyness
+    for adj_indx in p[adjacents.indices]:
+        summed_h += happiness(adj_indx,A,P,G,s)
+    return summed_h
+
+
 def all_happiness(A,P,G,p,s):
     return np.array([happiness(p_indx,A,P,G,s) for p_indx in p])
 
@@ -39,6 +49,28 @@ def swap_seats(person_i,person_j,s,p):
     p[s[person_i]],p[s[person_j]]=person_i,person_j
     return s,p
 
+def sat_with_friends(s,A,P,attendee,guestlist):
+    ''' Check that the selected person is sat with all of their friends (high priorities)'''
+    person_i=guestlist.find(attendee)
+    person_seat = s[person_i]
+    adjacents = A.getrow(person_seat)    # adjacency for this person's seat
+
+    count=0
+    total=0
+    pissed=[]
+    friends = P.getrow(person_i)      # preferences for other people (value is how much, index is the friend index)
+    for friend_pref, friend_seat in zip(friends.data, s[friends.indices]):
+        if friend_pref<=3: continue #skip those who dont really care
+        total+=1
+        for adj_seat in adjacents.indices:
+            if friend_seat == adj_seat:
+                count+=1
+                break
+    if (count==0) and (len(friends.indices)!=0):  
+        pissed=[person_i]
+    return count, total, pissed
+
+
 def sat_with_guests(s,A,attendee,guestlist):
     ''' Check that the selected person is sat with all of their guests'''
     person_i=guestlist.find(attendee)
@@ -46,8 +78,6 @@ def sat_with_guests(s,A,attendee,guestlist):
     name=guestlist.everyone[person_i]
 
     adjacents = A.getrow(seat_number)    # adjacency for this person's seat
-
-    #   attendee_indx=guestlist.find(attendee)
     count=0
     total=0
     for guest in guestlist.attendees_guest_map[name]:
@@ -57,6 +87,7 @@ def sat_with_guests(s,A,attendee,guestlist):
         for adj_indx in adjacents.indices:
             if guest_location == adj_indx:
                 count+=1
+                break
     return count, total
 
 def all_sat_with_guests(s,A,guestlist):
@@ -64,4 +95,15 @@ def all_sat_with_guests(s,A,guestlist):
     for attendee in guestlist.attendees: 
         si, ti = sat_with_guests(s,A,attendee,guestlist)
         score+=si ; total+= ti
-    print(f'SCORE: {score} of {total}')
+    return score,total
+
+def all_sat_with_friends(s,A,P,guestlist):
+    score=0;total=0;pissed=[]
+    for attendee in guestlist.attendees: 
+        si, ti, pi = sat_with_friends(s,A,P,attendee,guestlist)
+        score+=si ; total+= ti; pissed.extend(pi)
+    outstr=f'SCORE2: {score} of {total}. People pissed:\n'
+    for pi in pissed:
+        outstr+= f'___ {guestlist.everyone[pi]}\n'
+    return outstr
+

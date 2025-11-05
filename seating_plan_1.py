@@ -5,7 +5,8 @@ import sys
 from scipy.linalg import block_diag
 from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
-from metrics_moves import total_happiness,all_happiness,swap_seats,all_sat_with_guests
+from metrics_moves import total_happiness,all_happiness,swap_seats,all_sat_with_guests,all_sat_with_friends,h_meandnearby
+
 folder='/mnt/c/Users/Cole/Downloads'
 folder='/home/colehunt/software/MCR-dining/data'
 folder='/home/ach221/Downloads'
@@ -29,62 +30,90 @@ p: Person location      p[seat#]= person#
 
 
 ### Initial conditions
-# s0=np.arange(ntot)
-# p0=np.arange(ntot)
+# s=np.arange(ntot)
+# p=np.arange(ntot)
 # Random permutation for seating
 
 
 ### Randomize initial confign
 # Set a different seed, e.g., 42
-np.random.seed(42)
-s0 = np.random.permutation(ntot)
-p0 = np.empty_like(s0)
-p0[s0] = np.arange(ntot)
-h0=total_happiness(A,P,G,p0,s0)
+np.random.seed(489)
+s = np.random.permutation(ntot)
+p = np.empty_like(s)
+p[s] = np.arange(ntot)
+h=total_happiness(A,P,G,p,s)
 
 ### Setup the plot
 show=0
 save_to_spreadsheet=1
 if show:
-    sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p0,s0),p0)
+    sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p,s),p)
     def stop(event):sys.exit()
     stop_button.on_clicked(stop)
-T=10
-nt=10000
-for it in range(nt):  
-    T*=0.9995
+        
+T = 10
+hlist = []
+nt = 1_000_00
+cooling_rate = 0.9995
+nhist = 50
+tol = 0.1
+h_best=0
+p_best=p.copy()
 
+for it in range(nt):
+    # pick two random people to swap
     i, j = np.random.choice(ntot, size=2, replace=False)
-    s,p=swap_seats(i,j,s0.copy(),p0.copy())
-    h=total_happiness(A,P,G,p,s)
+    s_trial, p_trial = swap_seats(i, j, s.copy(), p.copy())
+    h_trial = total_happiness(A, P, G, p_trial, s_trial)
+    delta_h = h_trial - h
 
-    delta_h = h - h0
-    if it%100==0:
-        all_sat_with_guests(s,A,guestlist)
-        print(f'{it}/{nt}   h={h}   T={T}')
+    # Metropolis acceptance rule
+    if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
+        h = h_trial
+        s[:] = s_trial
+        p[:] = p_trial
+
+    # Every 100 steps, monitor progress
+    if it % 100 == 0:
+        score1,total1=all_sat_with_guests(s,A,guestlist)
+        print('SCORE1: {} of {}'.format(score1,total1))
+        print(all_sat_with_friends(s,A,P,guestlist))
+        print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
+        hlist.append(h)
+
+            # Store best configuration if new better one here
+        if h>h_best and score1==total1:
+            h_best=h
+            p_best=p.copy()
+            s_best=s.copy()
+            print('saved new one')
         if show:
             ax.set_title(f"Update {it+1}")
             plt.draw()
-            plt.pause(0.00001)  # wait 5 seconds
+            plt.pause(0.00001)
 
-    # Always accept if better, otherwise accept with probability exp(delta_h / T)
-    if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
-        h0=h
-        s0=s.copy()
-        p0=p.copy()
-        if show:
-            sc.set_array(all_happiness(A,P,G,p,s))                   # update scatter color data
-            for seat_idx, t in enumerate(text_labels): #update 
-                t.set_text(p[seat_idx])  # 
+    # Check for local minimum (every 1000 steps maybe)
+    if len(hlist) >= nhist and it % 1000 == 0:
+        recent = np.array(hlist[-nhist:])
+        mean = np.mean(recent)
+        var = np.var(recent) / (mean**2 + 1e-9)
+        if var < tol:
+            print(f"🔥 Local minimum detected at iteration {it}. Reheating!")
+            T *= 10   # reheat
+            hlist = []  # reset history
+
+    # Gradual cooling
+    T *= cooling_rate
 
     
 ## Save the results to the seating plan
 import openpyxl
+print(f'best happiness {h_best}')
 filename= f'data/Seating-plan-template.xlsx'
 wb = openpyxl.load_workbook(filename)
 ws = wb.active 
 # Write each name into its corresponding cell
-for (col, row), person_indx in zip(seat_positions, p):
+for (col, row), person_indx in zip(seat_positions, p_best):
     name=namelist[person_indx]
     # print(row,col)
     ws.cell(row=int(row), column=int(col), value=name)

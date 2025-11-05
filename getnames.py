@@ -47,7 +47,7 @@ class AttendeeScraper:
 
         #NOTE list(set( )) removes duplicates
         # self.attendees.extend(list(set(self.attendees_guest_map.keys()))) #list of the people that have booked (not including peoples guests)
-        self.attendees.extend( self.attendees_guest_map.keys()) #list of the people that have booked (not including peoples guests)
+        self.attendees.extend(self.attendees_guest_map.keys()) #list of the people that have booked (not including peoples guests)
         ### add to everyone 
         for attendee, guests in self.attendees_guest_map.items():
             self.everyone.append(attendee)
@@ -58,16 +58,20 @@ class AttendeeScraper:
     def load_Swaps(self):
         if self.swap_filepath == None: sys.exit('need to specify the file first silly')
         ''' Load the swap people THAT WANT TO BE PUT IN SEATING PLAN'''
-        included_colleges=['St Catz']
+        included_colleges=['St Catz','Wolfson','Clare Hall']
         df = pd.read_excel(self.swap_filepath, engine='openpyxl')
         for index, row in df.iterrows():# go through each row in the spreadsheet
-        ## do the preferences for seating next to eachother
             name = row['Name']
             college = row['College']
             if college in included_colleges:
-                self.everyone.append(name)
-                self.attendees.append(name)
-                self.attendees_guest_map[name]=[]
+                if name in self.everyone: #NOTE this is to set duplicates to be guests of eachother (Antonia N on swaps sheet...)
+                    self.everyone.append(f'guest of {name}')
+                    self.attendees.append(name)
+                    self.attendees_guest_map[name]=[f'Guest of {name}']
+                else:
+                    self.everyone.append(name)
+                    self.attendees.append(name)
+                    self.attendees_guest_map[name]=[]
             else:
                 self.others.append(name)
         return
