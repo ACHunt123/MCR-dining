@@ -5,7 +5,7 @@ import sys
 from scipy.linalg import block_diag
 from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
-from metrics_moves import total_happiness,all_happiness,swap_seats,all_sat_with_guests,all_sat_with_friends,h_meandnearby
+from metrics_moves import total_happiness,all_happiness,trial_move,trial_move2,all_sat_with_guests,all_sat_with_friends
 
 folder='/mnt/c/Users/Cole/Downloads'
 folder='/home/colehunt/software/MCR-dining/data'
@@ -37,7 +37,7 @@ p: Person location      p[seat#]= person#
 
 ### Randomize initial confign
 # Set a different seed, e.g., 42
-np.random.seed(489)
+np.random.seed(788)
 s = np.random.permutation(ntot)
 p = np.empty_like(s)
 p[s] = np.arange(ntot)
@@ -59,34 +59,35 @@ nhist = 50
 tol = 0.1
 h_best=0
 p_best=p.copy()
+h = total_happiness(A, P, G, p, s)
+h0=h
 
 for it in range(nt):
     # pick two random people to swap
-    i, j = np.random.choice(ntot, size=2, replace=False)
-    s_trial, p_trial = swap_seats(i, j, s.copy(), p.copy())
-    h_trial = total_happiness(A, P, G, p_trial, s_trial)
-    delta_h = h_trial - h
+    # i, j = np.random.choice(ntot, size=2, replace=False)
+    # s_trial, p_trial = swap_seats(i, j, s.copy(), p.copy())
+    # h_trial = total_happiness(A, P, G, p_trial, s_trial)
+    # delta_h = h_trial - h
+    delta_h,s_trial,p_trial=trial_move2(ntot,s,p,A,P,G)
 
     # Metropolis acceptance rule
     if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
-        h = h_trial
+
+        h += delta_h
         s[:] = s_trial
         p[:] = p_trial
 
     # Every 100 steps, monitor progress
     if it % 100 == 0:
         score1,total1=all_sat_with_guests(s,A,guestlist)
-        print('SCORE1: {} of {}'.format(score1,total1))
-        print(all_sat_with_friends(s,A,P,guestlist))
-        print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
+        # print('SCORE1: {} of {}'.format(score1,total1))
+        # print(all_sat_with_friends(s,A,P,guestlist))
+        print(h,total_happiness(A, P, G, p, s))
+        # print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
         hlist.append(h)
 
             # Store best configuration if new better one here
-        if h>h_best and score1==total1:
-            h_best=h
-            p_best=p.copy()
-            s_best=s.copy()
-            print('saved new one')
+
         if show:
             ax.set_title(f"Update {it+1}")
             plt.draw()
@@ -105,7 +106,10 @@ for it in range(nt):
     # Gradual cooling
     T *= cooling_rate
 
-    
+    if h>h_best:# and score1==total1:
+        h_best=h
+        p_best=p.copy()
+        s_best=s.copy()    
 ## Save the results to the seating plan
 import openpyxl
 print(f'best happiness {h_best}')

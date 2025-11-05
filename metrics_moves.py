@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 ''' All of the functions to measure happiness etc'''
 
@@ -25,14 +26,32 @@ def happiness(person_indx,A,P,G,s):
 
     return h
 
-def h_meandnearby(person_indx,A,P,G,s,p):
-    ''' Calculates the happiness of me, and all of the people sitting next to me'''
-    seat_number = s[person_indx]
-    adjacents = A.getrow(seat_number)    # adjacency for this person's seat
-    summed_h = happiness(person_indx,A,P,G,s) #my happyness
-    for adj_indx in p[adjacents.indices]:
-        summed_h += happiness(adj_indx,A,P,G,s)
-    return summed_h
+def ij_andnearby(person_i,person_j,A,P,G,s,p):
+    """Happiness of person_i, person_j, and all their adjacent neighbors (no double counting)."""
+    seat_i, seat_j = s[person_i], s[person_j]
+    adj_i, adj_j = A.getrow(seat_i), A.getrow(seat_j)
+    # All affected seats (combine neighbors)
+    combined_indices = np.unique(np.concatenate([adj_i.indices, adj_j.indices]))
+    # Map seats to people sitting there
+    affected_people = np.unique(np.concatenate([[person_i, person_j], p[combined_indices]]))
+    
+    # Sum happiness for all affected people
+    total = sum(happiness(person, A, P, G, s) for person in affected_people)
+    return total
+
+def trial_move(ntot,s,p,A,P,G,h):
+    i, j = np.random.choice(ntot, size=2, replace=False)
+    s_trial, p_trial = swap_seats(i, j, s.copy(), p.copy())
+    h_trial = total_happiness(A, P, G, p_trial, s_trial)
+    return h_trial - h,h_trial,s_trial,p_trial
+
+def trial_move2(ntot,s,p,A,P,G):
+    i, j = np.random.choice(ntot, size=2, replace=False)
+    h0 =ij_andnearby(i,j,A,P,G,s,p)
+    s_trial, p_trial = swap_seats(i, j, s.copy(), p.copy())
+    h1 =ij_andnearby(i,j,A,P,G,s_trial,p_trial) 
+
+    return h1-h0,s_trial,p_trial
 
 
 def all_happiness(A,P,G,p,s):
