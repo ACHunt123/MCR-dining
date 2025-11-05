@@ -7,6 +7,22 @@ from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
 from metrics_moves import total_happiness,all_happiness,trial_move,trial_move2,all_sat_with_guests,all_sat_with_friends
 
+import argparse
+import numpy as np
+
+# Add argparse
+parser = argparse.ArgumentParser(description="Run seating / bath simulation with optional seed")
+parser.add_argument("--seed", type=int, default=None, help="Random seed")
+args = parser.parse_args()
+
+# Set the seed if provided
+if args.seed is not None:
+    np.random.seed(args.seed)
+    import random
+    random.seed(args.seed)
+    print(f'using seed {args.seed}')
+
+
 folder='/mnt/c/Users/Cole/Downloads'
 folder='/home/colehunt/software/MCR-dining/data'
 folder='/home/ach221/Downloads'
@@ -81,7 +97,7 @@ for it in range(nt):
     if it % 500 == 0:
         score1,total1=all_sat_with_guests(s,A,guestlist)
         print('SCORE1: {} of {}'.format(score1,total1))
-        print(all_sat_with_friends(s,A,P,guestlist))
+        print(all_sat_with_friends(s,A,P,guestlist)[0])
 
         print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
         hlist.append(h)
@@ -113,7 +129,8 @@ for it in range(nt):
 ## Save the results to the seating plan
 import openpyxl
 print(f'best happiness {h_best}')
-filename= f'data/Seating-plan-template.xlsx'
+script_path='/home/ach221/software/MCR-Dining'
+filename= f'{script_path}/data/Seating-plan-template.xlsx'
 wb = openpyxl.load_workbook(filename)
 ws = wb.active 
 # Write each name into its corresponding cell
@@ -123,16 +140,17 @@ for (col, row), person_indx in zip(seat_positions, p_best):
     ws.cell(row=int(row), column=int(col), value=name)
 
 # Save under a new name to keep the original template safe
-wb.save(f"data/seating_filled.xlsx")
-# save as a pdf
-df = pd.read_excel(f"data/seating_filled.xlsx", sheet_name="Sheet1")
-df = df.fillna('')
-html = df.to_html(index=False, border=1, justify='center')
-with open("table.html", "w") as f:
-    f.write(html)
-from weasyprint import HTML
-HTML("table.html").write_pdf("seating_chart.pdf")
+wb.save(f"seating_filled.xlsx")
+score1,total1=all_sat_with_guests(s,A,guestlist)
+outstr,npissed,score2,total2=all_sat_with_friends(s,A,P,guestlist)
 
+data = np.array([[score1, total1,score2,total2, npissed]])
+
+# Save numeric data
+np.savetxt("results.txt", data, 
+           header="score1 total1 score2 total2 number_pissed_off", 
+           fmt="%.4f", 
+           comments="")
 
 
 

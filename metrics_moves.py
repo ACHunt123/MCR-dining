@@ -121,5 +121,5 @@ def all_sat_with_friends(s,A,P,guestlist):
     outstr=f'SCORE2: {score} of {total}. People pissed:\n'
     for pi in pissed:
         outstr+= f'___ {guestlist.everyone[pi]}\n'
-    return outstr
+    return outstr,len(pissed),score,total
 
