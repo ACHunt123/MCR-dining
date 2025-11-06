@@ -1,2 +1,0 @@
-score1 total1 score2 total2 number_pissed_off total_hapiness
-24.0000 25.0000 160.0000 193.0000 2.0000 3787.0000
