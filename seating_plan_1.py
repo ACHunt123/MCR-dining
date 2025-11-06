@@ -17,6 +17,7 @@ args = parser.parse_args()
 
 # Set the seed if provided
 if args.seed is not None:
+    args.seed+=1000
     np.random.seed(args.seed)
     import random
     random.seed(args.seed)
@@ -160,11 +161,11 @@ score1,total1,_=all_sat_with_guests(s,A,guestlist)
 outstr,npissed,score2,total2,_=all_sat_with_friends(s,A,P,guestlist)
 h = total_happiness(A, P, G, p, s)
 
-data = np.array([[score1, total1,score2,total2, npissed, h]])
+data = np.array([[score1, total1,score2,total2, npissed, h,args.seed]])
 
 # Save numeric data
 np.savetxt("results.txt", data, 
-           header="score1 total1 score2 total2 number_pissed_off total_hapiness", 
+           header="score1 total1 score2 total2 number_pissed_off total_hapiness seed", 
            fmt="%.4f", 
            comments="")
 

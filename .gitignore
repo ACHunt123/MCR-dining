@@ -140,4 +140,6 @@ temp/
 Icon?
 
 # THe actual seating plan (privacy reasons)
-data/seating_filled.xlsx
+**/seating_filled.xlsx
+**/nametags_filled.xlsx
+**/results.txt

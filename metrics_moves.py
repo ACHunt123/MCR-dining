@@ -113,7 +113,7 @@ def sat_with_friends(s,A,P,attendee,guestlist):
     pissed=[]
     friends = P.getrow(person_i)      # preferences for other people (value is how much, index is the friend index)
     for friend_pref, friend_seat in zip(friends.data, s[friends.indices]):
-        if friend_pref<=3: continue #skip those who dont really care
+        if friend_pref<=3: continue #skip those who dont really care (the third priority)
         total+=1
         for adj_seat in adjacents.indices:
             if friend_seat == adj_seat:

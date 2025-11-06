@@ -66,7 +66,6 @@ class AttendeeScraper:
             if college in included_colleges:
                 if name in self.everyone: #NOTE this is to set duplicates to be guests of eachother (Antonia N on swaps sheet...)
                     self.everyone.append(f'Guest of {name}')
-                    self.attendees.append(name)
                     self.attendees_guest_map[name]=[f'Guest of {name}']
                 else:
                     self.everyone.append(name)
@@ -87,6 +86,8 @@ class AttendeeScraper:
             print(attendee)
             for guest in self.attendees_guest_map[attendee]:
                 print(f'__{guest} (guest of {attendee})')
+        # for person in self.everyone:
+        #     print(person)
 
     def find(self,name):
         ''' find the index of the name in the everyone list'''
