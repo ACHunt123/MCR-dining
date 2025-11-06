@@ -86,8 +86,6 @@ class AttendeeScraper:
             print(attendee)
             for guest in self.attendees_guest_map[attendee]:
                 print(f'__{guest} (guest of {attendee})')
-        # for person in self.everyone:
-        #     print(person)
 
     def find(self,name):
         ''' find the index of the name in the everyone list'''

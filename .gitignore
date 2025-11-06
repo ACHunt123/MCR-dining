@@ -141,5 +141,7 @@ Icon?
 
 # THe actual seating plan (privacy reasons)
 **/seating_filled.xlsx
-**/nametags_filled.xlsx
+**/nametags_filled.docx
+**/nametags_filled*
+
 **/results.txt

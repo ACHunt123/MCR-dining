@@ -89,7 +89,7 @@ def plot_setup(plt,seat_positions,happiness,p,mode='interactive'):
     fig, ax = plt.subplots()
     ax.invert_yaxis() #for excel-like indexing
     sc = ax.scatter([x for x,y in seat_positions],[y for x,y in seat_positions],  c=happiness, cmap='RdYlGn')
-    plt.colorbar(sc,label='n value')
+    cbar=plt.colorbar(sc,label='n value')
     # Button setup
     button_ax = plt.axes([0.4, 0.05, 0.2, 0.075])  # x, y, width, height
     stop_button = Button(button_ax, 'STOP', color='lightcoral', hovercolor='red')
@@ -97,7 +97,7 @@ def plot_setup(plt,seat_positions,happiness,p,mode='interactive'):
     for seat_number, (x, y) in enumerate(seat_positions):
         t = ax.text(x, y, p[seat_number], fontsize=9, ha='center', va='center', color='black')
         text_labels.append(t)
-    return sc,ax,stop_button,text_labels
+    return sc,cbar,ax,stop_button,text_labels
 
     
 

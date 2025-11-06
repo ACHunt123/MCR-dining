@@ -61,9 +61,10 @@ h=total_happiness(A,P,G,p,s)
 
 ### Setup the plot
 show=0
-save_to_spreadsheet=1
+save_to_spreadsheet=0
 if show:
-    sc,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p,s),p)
+    plt.ion()
+    sc,cbar,ax,stop_button,text_labels=plot_setup(plt,seat_positions,all_happiness(A,P,G,p,s),p)
     def stop(event):sys.exit()
     stop_button.on_clicked(stop)
         
@@ -117,9 +118,15 @@ for it in range(nt):
             # Store best configuration if new better one here
 
         if show:
-            ax.set_title(f"Update {it+1}")
+            ax.set_title(f"Update {it+1}, happiness {h}")
+            hall=all_happiness(A,P,G,p,s)
+            sc.set_array(hall)  # update scatter color data
+            for seat_number, t in enumerate(text_labels):
+                t.set_text(p[seat_number])
+            sc.set_clim(0, max(hall))       # update color scale range
+            cbar.update_normal(sc)    # sync the colorbar with the new limits
             plt.draw()
-            plt.pause(0.00001)
+            plt.pause(0.0001)
 
     # Check for local minimum (every 1000 steps maybe)
     if len(hlist) >= nhist and it % 1000 == 0:
