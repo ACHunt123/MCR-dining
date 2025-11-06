@@ -5,7 +5,7 @@ import sys
 from scipy.linalg import block_diag
 from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
-from metrics_moves import total_happiness,all_happiness,trial_move,trial_move2,all_sat_with_guests,all_sat_with_friends
+from metrics_moves import total_happiness,all_happiness,trial_move,trial_move2,trial_move3,all_sat_with_guests,all_sat_with_friends
 
 import argparse
 import numpy as np
@@ -53,7 +53,6 @@ p: Person location      p[seat#]= person#
 
 ### Randomize initial confign
 # Set a different seed, e.g., 42
-np.random.seed(788)
 s = np.random.permutation(ntot)
 p = np.empty_like(s)
 p[s] = np.arange(ntot)
@@ -84,7 +83,8 @@ for it in range(nt):
     # s_trial, p_trial = swap_seats(i, j, s.copy(), p.copy())
     # h_trial = total_happiness(A, P, G, p_trial, s_trial)
     # delta_h = h_trial - h
-    delta_h,s_trial,p_trial=trial_move2(ntot,s,p,A,P,G)
+    # delta_h,s_trial,p_trial=trial_move2(ntot,s,p,A,P,G)
+    delta_h,s_trial,p_trial=trial_move3(ntot,s,p,A,P,G)
 
     # Metropolis acceptance rule
     if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
@@ -93,11 +93,22 @@ for it in range(nt):
         s[:] = s_trial
         p[:] = p_trial
 
-    # Every 100 steps, monitor progress
+    # Every 100 steps, monitor progress, and help those who are pissed off
     if it % 500 == 0:
-        score1,total1=all_sat_with_guests(s,A,guestlist)
+        score1,total1,pissed1=all_sat_with_guests(s,A,guestlist)
+        outstr,npissed2,score2,total2,pissed2=all_sat_with_friends(s,A,P,guestlist)
+        #  do moves of making people not mad:
+        for pissed_indx in np.unique(np.concatenate([pissed1, pissed2])):
+            delta_h,s_trial,p_trial=trial_move3(ntot,s,p,A,P,G,int(pissed_indx))
+            if delta_h > 0 or np.random.rand() < np.exp(delta_h / T):
+                h += delta_h
+                s[:] = s_trial
+                p[:] = p_trial
+       
         print('SCORE1: {} of {}'.format(score1,total1))
-        print(all_sat_with_friends(s,A,P,guestlist)[0])
+        print(outstr)
+
+
 
         print(f'{it}/{nt}   h={h:.2f}   T={T:.3f}')
         hlist.append(h)
@@ -126,7 +137,11 @@ for it in range(nt):
         h_best=h
         p_best=p.copy()
         s_best=s.copy()    
+
+        
 ## Save the results to the seating plan
+p=p_best.copy()
+s=s_best.copy()
 import openpyxl
 print(f'best happiness {h_best}')
 script_path='/home/ach221/software/MCR-Dining'
@@ -141,14 +156,15 @@ for (col, row), person_indx in zip(seat_positions, p_best):
 
 # Save under a new name to keep the original template safe
 wb.save(f"seating_filled.xlsx")
-score1,total1=all_sat_with_guests(s,A,guestlist)
-outstr,npissed,score2,total2=all_sat_with_friends(s,A,P,guestlist)
+score1,total1,_=all_sat_with_guests(s,A,guestlist)
+outstr,npissed,score2,total2,_=all_sat_with_friends(s,A,P,guestlist)
+h = total_happiness(A, P, G, p, s)
 
-data = np.array([[score1, total1,score2,total2, npissed]])
+data = np.array([[score1, total1,score2,total2, npissed, h]])
 
 # Save numeric data
 np.savetxt("results.txt", data, 
-           header="score1 total1 score2 total2 number_pissed_off", 
+           header="score1 total1 score2 total2 number_pissed_off total_hapiness", 
            fmt="%.4f", 
            comments="")
 
