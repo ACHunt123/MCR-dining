@@ -1,11 +1,9 @@
-import pandas as pd
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
-from scipy.linalg import block_diag
-from matplotlib.widgets import Button
 from setup import get_Matrices,plot_setup
-from metrics_moves import total_happiness,all_happiness,trial_move,trial_move2,trial_move3,all_sat_with_guests,all_sat_with_friends
+from MCR_Dining.superhall_seatingplan.metrics_moves import total_happiness,all_happiness,trial_move,trial_move2,trial_move3,all_sat_with_guests,all_sat_with_friends
 
 import argparse
 import numpy as np
@@ -152,8 +150,10 @@ p=p_best.copy()
 s=s_best.copy()
 import openpyxl
 print(f'best happiness {h_best}')
-script_path='/home/ach221/software/MCR-Dining'
-filename= f'{script_path}/data/Seating-plan-template.xlsx'
+
+# Point to the Excel file in the same folder
+base = Path(__file__).parent # Get the path to the current script
+filename = base / "Seating-plan-template.xlsx"
 wb = openpyxl.load_workbook(filename)
 ws = wb.active 
 # Write each name into its corresponding cell

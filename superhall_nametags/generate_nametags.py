@@ -1,6 +1,5 @@
 import sys,math
-sys.path.append("/home/ach221/software/MCR-Dining")
-from getnames import AttendeeScraper
+from MCR_Dining.getnames import AttendeeScraper
 from docx import Document
 
 

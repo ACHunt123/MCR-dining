@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 from matplotlib.widgets import Button
-from getnames import AttendeeScraper
+from MCR_Dining.getnames import AttendeeScraper
 from scipy.sparse import csr_matrix
-from hall_setup import setup_hall
+from MCR_Dining.superhall_seatingplan.hall_setup import setup_hall
 
 def get_Matrices(event_booking_html,swaps_xlsprd,seating_form_responses):
     ### Get the names from Upay
