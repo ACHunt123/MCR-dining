@@ -15,7 +15,6 @@ args = parser.parse_args()
 
 # Set the seed if provided
 if args.seed is not None:
-    args.seed+=1000
     np.random.seed(args.seed)
     import random
     random.seed(args.seed)
